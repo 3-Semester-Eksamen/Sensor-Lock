@@ -1,34 +1,37 @@
 from sense_hat import SenseHat
+from udp_broadcaster import Broadcast
 from random import randint
-# from socket import *
 from datetime import datetime
+from time import sleep
+from threading import Timer
 import math
 import os
 
+OPEN_DURATION = 1
+BROADCAST_PORT = 7001
+MAC_ADDRESS = "00:00:5e:00:53:af"
+
 sense = SenseHat()
-# s = socket(AF_INET, SOCK_DGRAM)
-# s.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
-# BROADCAST_PORT = 7001;
+udp = Broadcast(MAC_ADDRESS, BROADCAST_PORT)
 
-colors = {"empty": (0, 0, 0), "red": (255, 0, 0), "green": (0, 255, 0), "blue": (0, 0, 255)}
-
-
-# Function that gets the MAC-address of the Raspberry IP, and returns it.
-def get_sensor_mac_address():
-    # Placeholder MAC-Address
-    return "00:00:5e:00:53:af"
+colors = {"empty": (0, 0, 0), "red": (255, 0, 0), "green": (0, 255, 0), "blue": (0, 0, 255), "yellow": (255, 255, 0)}
+# Lock state indicates, whether current access is being handled. To make opening the door, run synchronously.
+lock_ready = False
 
 
 # Function that gets called, once the joystick on the SenseHat is fired.
 def trigger_open(event):
+    global lock_ready
     # Only fire if the event is pressed.
-    if event.action == "pressed":
-        handle_input(get_id_from_humid())
+    if (event.action == "pressed") and (lock_ready is True):
+        lock_ready = False
+        handle_input(get_sensor_id())
 
 
 # Function that should be called, to generate a test id.
-def get_id_from_humid():
-    return math.floor(sense.get_humidity() / 10)
+# During testing a number between 1 and 10 is returned.
+def get_sensor_id():
+    return randint(0, 10)
 
 
 # Function that handles the input, and reflecting that in the SenseHat display.
@@ -36,23 +39,15 @@ def get_id_from_humid():
 # Function can also only ever execute, if it's been more that X-seconds, since last executing,
 # to prevent overloading of the sensor.
 # Id is the user, that tried to open the door.
-last_change = datetime.utcnow()
+def handle_input(id_key):
+    if id_key > 2:
+        accept_entry(id_key)
+    else:
+        deny_entry(id_key)
 
 
-def handle_input(idKey):
-    global last_change
-    # Guard clause, that prevents overloading of the sensor.
-    if (datetime.utcnow() - last_change).seconds >= 1:
-        last_change = datetime.utcnow()
-        # Only allow entry, if the id is a power of 2.
-        if idKey % 2 == 0:
-            accept_entry(idKey)
-        else:
-            deny_entry(idKey)
-
-
-# Function that represents a succesfull access to the lock.
-def accept_entry(idKey):
+# Function that represents successful access to the lock.
+def accept_entry(id_key):
     e = colors["empty"]
     g = colors["green"]
     pixels = [
@@ -66,11 +61,12 @@ def accept_entry(idKey):
         e, e, e, e, e, e, e, e
     ]
     sense.set_pixels(pixels)
-    # DoBroadcast
+    Timer(1, standby_entry).start()
+    udp.broadcast('"sensor": "' + MAC_ADDRESS + '", opened_by: "' + str(id_key) + '", "message": "door opened"')
 
 
-# Function that represents a failed access to the lock.
-def deny_entry(idKey):
+# Function that represents failed access to the lock.
+def deny_entry(id_key):
     e = colors["empty"]
     r = colors["red"]
     pixels = [
@@ -84,10 +80,29 @@ def deny_entry(idKey):
         e, e, e, e, e, e, e, e
     ]
     sense.set_pixels(pixels)
+    Timer(1, standby_entry).start()
 
 
-sensor_id = get_sensor_mac_address()
+def standby_entry():
+    e = colors["empty"]
+    y = colors["yellow"]
+    pixels = [
+        e, e, e, e, e, e, e, e,
+        e, y, y, e, e, y, y, e,
+        e, y, e, e, e, e, y, e,
+        e, e, e, e, e, e, e, e,
+        e, e, e, e, e, e, e, e,
+        e, y, e, e, e, e, y, e,
+        e, y, y, e, e, y, y, e,
+        e, e, e, e, e, e, e, e
+    ]
+    sense.set_pixels(pixels)
+    global lock_ready
+    lock_ready = True
+
+
 sense.stick.direction_any = trigger_open
+standby_entry()
 
 while True:
     pass
