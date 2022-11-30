@@ -52,10 +52,10 @@ def accept_entry(id_key):
     g = colors["green"]
     pixels = [
         e, e, e, e, e, e, e, e,
-        e, e, e, e, e, e, e, g,
+        e, e, e, e, e, e, e, e,
         e, e, e, e, e, e, g, e,
         e, e, e, e, e, g, e, e,
-        g, e, e, e, g, e, e, e,
+        e, e, e, e, g, e, e, e,
         e, g, e, g, e, e, e, e,
         e, e, g, e, e, e, e, e,
         e, e, e, e, e, e, e, e
