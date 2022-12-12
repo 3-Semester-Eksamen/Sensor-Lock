@@ -9,14 +9,19 @@ import os
 
 OPEN_DURATION = 1
 BROADCAST_PORT = 7001
-MAC_ADDRESS = "00:00:5e:00:53:af"
-
+MACS = ["00:00:5E:00:53:AF", "5D-21-E1-BD-EF-F3", "E5-B8-62-A6-CB-83", "01-41-03-4A-6F-C0", "0D-87-23-73-BC-1A"]
 sense = SenseHat()
-udp = Broadcast(MAC_ADDRESS, BROADCAST_PORT)
 
 colors = {"empty": (0, 0, 0), "red": (255, 0, 0), "green": (0, 255, 0), "blue": (0, 0, 255), "yellow": (255, 255, 0)}
 # Lock state indicates, whether current access is being handled. To make opening the door, run synchronously.
 lock_ready = False
+
+
+def get_mac_address():
+    return MACS[randint(0, len(MACS) - 1)]
+
+
+udp = Broadcast(BROADCAST_PORT)
 
 
 # Function that gets called, once the joystick on the SenseHat is fired.
@@ -62,7 +67,7 @@ def accept_entry(id_key):
     ]
     sense.set_pixels(pixels)
     Timer(1, standby_entry).start()
-    udp.broadcast('"sensor": "' + MAC_ADDRESS + '", "opened_by": "' + str(id_key) + '", "message": "door opened"')
+    udp.broadcast('"id: 0", "sensor": "' + get_mac_address() + '", "opened_by": "' + str(id_key) + '", "message": "door opened"')
 
 
 # Function that represents failed access to the lock.
