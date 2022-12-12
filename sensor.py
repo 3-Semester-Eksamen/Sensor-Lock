@@ -67,7 +67,7 @@ def accept_entry(id_key):
     ]
     sense.set_pixels(pixels)
     Timer(1, standby_entry).start()
-    udp.broadcast('"id: 0", "sensor": "' + get_mac_address() + '", "opened_by": "' + str(id_key) + '", "message": "door opened"')
+    udp.broadcast('"id": "0", "macAddressSensor": "' + get_mac_address() + '", "openedBy": "' + str(id_key) + '", "time": "NA"')
 
 
 # Function that represents failed access to the lock.
